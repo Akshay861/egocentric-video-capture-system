@@ -3,13 +3,23 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '../context/AuthContext';
 import { countVideosByWorker } from '../db/videoRepository';
+import { useUploadQueueStats } from '../hooks/useUploadQueueStats';
+import type { UploadState } from '../types/video';
 
 type HomeScreenProps = {
   onOpenCapture: () => void;
 };
 
+const STATE_LABELS: Record<UploadState, string> = {
+  pending: 'Pending',
+  uploading: 'Uploading',
+  uploaded: 'Uploaded',
+  failed: 'Failed',
+};
+
 export function HomeScreen({ onOpenCapture }: HomeScreenProps) {
   const { session, workerId, logout } = useAuth();
+  const { counts } = useUploadQueueStats(workerId);
   const [savedVideoCount, setSavedVideoCount] = useState(0);
 
   useEffect(() => {
@@ -21,7 +31,7 @@ export function HomeScreen({ onOpenCapture }: HomeScreenProps) {
       const total = await countVideosByWorker(workerId);
       setSavedVideoCount(total);
     })();
-  }, [workerId]);
+  }, [workerId, counts]);
 
   return (
     <View style={styles.container}>
@@ -37,6 +47,17 @@ export function HomeScreen({ onOpenCapture }: HomeScreenProps) {
 
       <Text style={styles.label}>Saved videos on this device</Text>
       <Text style={styles.value}>{savedVideoCount}</Text>
+
+      <Text style={styles.sectionTitle}>Upload queue status</Text>
+      {(Object.keys(STATE_LABELS) as UploadState[]).map((state) => (
+        <Text key={state} style={styles.queueRow}>
+          {STATE_LABELS[state]}: {counts[state]}
+        </Text>
+      ))}
+
+      <Text style={styles.note}>
+        Uploads run automatically in the background with retry backoff (2s to 64s).
+      </Text>
 
       <Pressable style={styles.primaryButton} onPress={onOpenCapture}>
         <Text style={styles.primaryButtonText}>Open video capture</Text>
@@ -71,6 +92,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#F3F4F6',
     marginBottom: 16,
+  },
+  sectionTitle: {
+    marginTop: 8,
+    marginBottom: 8,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#E5E7EB',
+  },
+  queueRow: {
+    color: '#D1D5DB',
+    marginBottom: 4,
+  },
+  note: {
+    marginTop: 8,
+    marginBottom: 12,
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#9CA3AF',
   },
   primaryButton: {
     marginTop: 12,

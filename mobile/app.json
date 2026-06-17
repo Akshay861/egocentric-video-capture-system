@@ -38,6 +38,10 @@
           "locationWhenInUsePermission": "Allow location access to attach GPS metadata to recordings."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "apiBaseUrl": "http://10.0.2.2:8000",
+      "maxRecordingDurationSeconds": 60
+    }
   }
 }

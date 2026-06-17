@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import type { AuthSession, IdentifierType } from '../types/auth';
 import { login as loginService, logout as logoutService, restoreSession } from '../services/auth/authService';
+import { uploadQueueWorker } from '../services/upload/uploadQueueWorker';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
@@ -32,6 +33,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus('unauthenticated');
     })();
   }, []);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      uploadQueueWorker.start();
+      return () => uploadQueueWorker.stop();
+    }
+
+    uploadQueueWorker.stop();
+  }, [status]);
 
   const login = useCallback(async (identifier: string, identifierType: IdentifierType) => {
     const nextSession = await loginService({ identifier, identifierType });

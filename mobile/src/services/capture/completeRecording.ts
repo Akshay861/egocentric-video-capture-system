@@ -2,6 +2,7 @@ import { File } from 'expo-file-system';
 
 import { insertVideo } from '../../db/videoRepository';
 import type { NewVideoRecordInput } from '../../types/video';
+import { uploadQueueWorker } from '../upload/uploadQueueWorker';
 import { DEFAULT_RECORDING_FPS, deriveFpsTier } from '../../utils/fps';
 import {
   collectBatteryLevelEnd,
@@ -55,5 +56,6 @@ export async function completeRecording(input: CompleteRecordingInput): Promise<
   };
 
   await insertVideo(record);
+  uploadQueueWorker.wake();
   return record;
 }
