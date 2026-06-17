@@ -2,8 +2,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { AppNavigator } from './src/navigation/AppNavigator';
 import { BootstrapStatusScreen } from './src/screens/BootstrapStatusScreen';
-import { HomeScreen } from './src/screens/HomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { bootstrapApp } from './src/services/bootstrap';
 
@@ -29,7 +29,7 @@ function AppContent() {
     return <LoginScreen />;
   }
 
-  return <HomeScreen />;
+  return <AppNavigator />;
 }
 
 export default function App() {

@@ -23,7 +23,21 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow camera access to record egocentric videos.",
+          "microphonePermission": "Allow microphone access to record video audio.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow location access to attach GPS metadata to recordings."
+        }
+      ]
     ]
   }
 }
