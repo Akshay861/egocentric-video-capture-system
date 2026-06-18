@@ -1,6 +1,8 @@
+import { uploadConfig } from '../config/upload';
+
 export function computeBackoffSeconds(attemptCount: number): number {
-  const exponential = Math.pow(2, Math.max(attemptCount, 1));
-  return Math.min(exponential, 64);
+  const exponential = Math.pow(uploadConfig.minBackoffSeconds, Math.max(attemptCount, 1));
+  return Math.min(exponential, uploadConfig.maxBackoffSeconds);
 }
 
 export function getRetryDelayMs(attemptCount: number): number {

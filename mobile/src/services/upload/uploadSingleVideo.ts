@@ -10,16 +10,26 @@ import { getCurrentNetworkType } from './networkInfo';
 import { requestPresignedUploadUrl } from './presignClient';
 import { uploadFileToPresignedUrl } from './s3Uploader';
 
-export async function uploadSingleVideo(video: VideoRecord): Promise<'uploaded' | 'skipped' | 'failed'> {
+type UploadCallbacks = {
+  onUploading?: () => void;
+};
+
+export async function uploadSingleVideo(
+  video: VideoRecord,
+  callbacks: UploadCallbacks = {}
+): Promise<'uploaded' | 'skipped' | 'failed'> {
   const claimed = await markUploading(video.videoId);
   if (!claimed) {
     return 'skipped';
   }
 
+  callbacks.onUploading?.();
+
   try {
     const presign = await requestPresignedUploadUrl({
       workerId: video.workerId,
       videoId: video.videoId,
+      startedAt: video.startedAt,
       contentType: uploadConfig.videoContentType,
     });
 
@@ -27,12 +37,24 @@ export async function uploadSingleVideo(video: VideoRecord): Promise<'uploaded' 
       throw new Error('Presign response does not match requested video identity.');
     }
 
-    await uploadFileToPresignedUrl(video.localPath, presign.uploadUrl, uploadConfig.videoContentType);
+    const uploadResult = await uploadFileToPresignedUrl(
+      video.localPath,
+      presign.uploadUrl,
+      uploadConfig.videoContentType
+    );
+
+    if (!uploadResult.etag) {
+      throw new Error('Upload succeeded but S3 did not return an ETag for confirmation.');
+    }
 
     const networkType = await getCurrentNetworkType();
-    const metadataJson = mergeUploadMetadata(video.metadataJson, networkType);
-    const uploaded = await markUploaded(video.videoId, metadataJson);
+    const metadataJson = mergeUploadMetadata(video.metadataJson, networkType, {
+      s3Key: presign.s3Key,
+      etag: uploadResult.etag,
+      uploadedAt: new Date().toISOString(),
+    });
 
+    const uploaded = await markUploaded(video.videoId, metadataJson);
     if (!uploaded) {
       throw new Error('Upload completed but database state transition was rejected.');
     }

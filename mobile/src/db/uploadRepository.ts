@@ -1,53 +1,8 @@
 import { getDatabase } from './client';
 import type { UploadState, VideoRecord } from '../types/video';
 import { uploadConfig } from '../config/upload';
-import { getRetryDelayMs, isReadyForRetry } from '../services/upload/backoff';
-
-type VideoRow = {
-  video_id: string;
-  worker_id: string;
-  started_at: string;
-  ended_at: string;
-  duration_ms: number;
-  file_size_bytes: number;
-  fps: number;
-  fps_tier: VideoRecord['fpsTier'];
-  device_model: string;
-  os_version: string;
-  resolution: string;
-  local_path: string;
-  upload_state: UploadState;
-  attempt_count: number;
-  last_error: string | null;
-  last_attempted_at: string | null;
-  metadata_json: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-function mapVideoRow(row: VideoRow): VideoRecord {
-  return {
-    videoId: row.video_id,
-    workerId: row.worker_id,
-    startedAt: row.started_at,
-    endedAt: row.ended_at,
-    durationMs: row.duration_ms,
-    fileSizeBytes: row.file_size_bytes,
-    fps: row.fps,
-    fpsTier: row.fps_tier,
-    deviceModel: row.device_model,
-    osVersion: row.os_version,
-    resolution: row.resolution,
-    localPath: row.local_path,
-    uploadState: row.upload_state,
-    attemptCount: row.attempt_count,
-    lastError: row.last_error,
-    lastAttemptedAt: row.last_attempted_at,
-    metadataJson: row.metadata_json,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
+import { getRetryDelayMs, isReadyForRetry } from '../utils/backoff';
+import { mapVideoRow, type VideoRow } from './videoRowMapper';
 
 export async function recoverInterruptedUploads(): Promise<number> {
   const db = await getDatabase();
@@ -81,15 +36,17 @@ export async function logUploadEvent(
   );
 }
 
-export async function selectNextUploadCandidate(): Promise<VideoRecord | null> {
+export async function selectNextUploadCandidate(workerId: string): Promise<VideoRecord | null> {
   const db = await getDatabase();
   const rows = await db.getAllAsync<VideoRow>(
     `
       SELECT *
       FROM videos
-      WHERE upload_state IN ('pending', 'failed')
+      WHERE worker_id = ?
+        AND upload_state IN ('pending', 'failed')
       ORDER BY created_at ASC
-    `
+    `,
+    workerId
   );
 
   for (const row of rows) {
@@ -237,15 +194,17 @@ export async function countUploadStates(workerId: string): Promise<Record<Upload
   } as Record<UploadState, number>;
 }
 
-export async function getNextRetryDelayMs(): Promise<number | null> {
+export async function getNextRetryDelayMs(workerId: string): Promise<number | null> {
   const db = await getDatabase();
   const rows = await db.getAllAsync<VideoRow>(
     `
       SELECT *
       FROM videos
-      WHERE upload_state = 'failed'
+      WHERE worker_id = ?
+        AND upload_state = 'failed'
       ORDER BY last_attempted_at ASC
-    `
+    `,
+    workerId
   );
 
   let minDelay: number | null = null;

@@ -27,7 +27,13 @@ export interface VideoRecord {
 export interface NewVideoRecordInput
   extends Omit<
     VideoRecord,
-    'uploadState' | 'attemptCount' | 'lastError' | 'lastAttemptedAt' | 'createdAt' | 'updatedAt'
+    | 'uploadState'
+    | 'attemptCount'
+    | 'lastError'
+    | 'lastAttemptedAt'
+    | 'metadataJson'
+    | 'createdAt'
+    | 'updatedAt'
   > {
   uploadState?: UploadState;
   attemptCount?: number;

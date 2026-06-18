@@ -35,13 +35,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && session?.workerId) {
+      uploadQueueWorker.setWorkerId(session.workerId);
       uploadQueueWorker.start();
       return () => uploadQueueWorker.stop();
     }
 
+    uploadQueueWorker.setWorkerId(null);
     uploadQueueWorker.stop();
-  }, [status]);
+  }, [status, session?.workerId]);
 
   const login = useCallback(async (identifier: string, identifierType: IdentifierType) => {
     const nextSession = await loginService({ identifier, identifierType });

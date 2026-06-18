@@ -22,6 +22,7 @@ export async function requestPresignedUploadUrl(
       worker_id: input.workerId,
       video_id: input.videoId,
       content_type: input.contentType ?? uploadConfig.videoContentType,
+      started_at: input.startedAt,
     },
     {
       timeout: 15_000,

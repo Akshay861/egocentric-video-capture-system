@@ -1,25 +1,24 @@
+import NetInfo from '@react-native-community/netinfo';
+
 import type { NetworkType } from '../../types/upload';
 
 export async function getCurrentNetworkType(): Promise<NetworkType> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2_000);
+    const state = await NetInfo.fetch();
 
-    const response = await fetch('https://clients3.google.com/generate_204', {
-      method: 'GET',
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      return 'unknown';
+    if (!state.isConnected) {
+      return 'none';
     }
 
-    // React Native fetch cannot reliably distinguish wifi vs cellular without NetInfo.
-    // We return unknown here and can upgrade with @react-native-community/netinfo later.
-    return 'unknown';
+    switch (state.type) {
+      case 'wifi':
+        return 'wifi';
+      case 'cellular':
+        return 'cellular';
+      default:
+        return 'unknown';
+    }
   } catch {
-    return 'none';
+    return 'unknown';
   }
 }

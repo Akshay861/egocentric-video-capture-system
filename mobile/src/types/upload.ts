@@ -1,6 +1,7 @@
 export interface PresignUploadRequest {
   workerId: string;
   videoId: string;
+  startedAt: string;
   contentType: string;
 }
 

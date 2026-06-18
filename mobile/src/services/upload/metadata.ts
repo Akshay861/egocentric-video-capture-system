@@ -2,14 +2,21 @@ import type { NetworkType } from '../../types/upload';
 
 export function mergeUploadMetadata(
   existingMetadataJson: string | null,
-  networkType: NetworkType
+  networkType: NetworkType,
+  uploadDetails: {
+    s3Key: string;
+    etag: string | null;
+    uploadedAt: string;
+  }
 ): string {
   const base = existingMetadataJson ? safeParseJson(existingMetadataJson) : {};
 
   return JSON.stringify({
     ...base,
     networkTypeAtUpload: networkType,
-    uploadedAt: new Date().toISOString(),
+    s3Key: uploadDetails.s3Key,
+    s3Etag: uploadDetails.etag,
+    uploadedAt: uploadDetails.uploadedAt,
   });
 }
 

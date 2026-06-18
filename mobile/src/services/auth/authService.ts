@@ -1,9 +1,7 @@
-import { v4 as uuidv4, v5 as uuidv5 } from 'uuid';
-
 import type { AuthSession, LoginInput } from '../../types/auth';
+import { createRandomId, createStableWorkerId } from '../../utils/ids';
+import { userMessages } from '../../utils/userMessages';
 import { clearSession, loadSession, saveSession } from './sessionStorage';
-
-const WORKER_ID_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
 function normalizeIdentifier(identifier: string, type: LoginInput['identifierType']): string {
   const trimmed = identifier.trim();
@@ -23,23 +21,19 @@ function isValidPhone(value: string): boolean {
   return /^\+?[0-9]{8,15}$/.test(value.replace(/\s+/g, ''));
 }
 
-function createWorkerId(identifier: string): string {
-  return uuidv5(identifier, WORKER_ID_NAMESPACE);
-}
-
 export function validateLoginInput(input: LoginInput): string | null {
   const normalized = normalizeIdentifier(input.identifier, input.identifierType);
 
   if (!normalized) {
-    return 'Please enter your email or phone number.';
+    return userMessages.login.emptyIdentifier;
   }
 
   if (input.identifierType === 'email' && !isValidEmail(normalized)) {
-    return 'Please enter a valid email address.';
+    return userMessages.login.invalidEmail;
   }
 
   if (input.identifierType === 'phone' && !isValidPhone(normalized)) {
-    return 'Please enter a valid phone number.';
+    return userMessages.login.invalidPhone;
   }
 
   return null;
@@ -53,8 +47,8 @@ export async function login(input: LoginInput): Promise<AuthSession> {
 
   const normalized = normalizeIdentifier(input.identifier, input.identifierType);
   const session: AuthSession = {
-    token: uuidv4(),
-    workerId: createWorkerId(normalized),
+    token: createRandomId(),
+    workerId: createStableWorkerId(normalized),
     identifier: normalized,
     identifierType: input.identifierType,
     loggedInAt: new Date().toISOString(),
