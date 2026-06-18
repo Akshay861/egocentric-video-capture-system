@@ -1,9 +1,10 @@
 import { useState } from 'react';
 
-import { CaptureScreen } from './CaptureScreen';
-import { HomeScreen } from './HomeScreen';
+import { CaptureScreen } from '../screens/CaptureScreen';
+import { HomeScreen } from '../screens/HomeScreen';
+import { VideoDashboardScreen } from '../screens/VideoDashboardScreen';
 
-export type AppScreen = 'home' | 'capture';
+export type AppScreen = 'home' | 'capture' | 'dashboard';
 
 export function AppNavigator() {
   const [screen, setScreen] = useState<AppScreen>('home');
@@ -12,5 +13,14 @@ export function AppNavigator() {
     return <CaptureScreen onBack={() => setScreen('home')} />;
   }
 
-  return <HomeScreen onOpenCapture={() => setScreen('capture')} />;
+  if (screen === 'dashboard') {
+    return <VideoDashboardScreen onBack={() => setScreen('home')} />;
+  }
+
+  return (
+    <HomeScreen
+      onOpenCapture={() => setScreen('capture')}
+      onOpenDashboard={() => setScreen('dashboard')}
+    />
+  );
 }

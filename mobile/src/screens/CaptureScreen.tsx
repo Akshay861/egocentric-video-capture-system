@@ -3,21 +3,25 @@ import type { CameraType } from 'expo-camera';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { v4 as uuidv4 } from 'uuid';
 
 import { useAuth } from '../context/AuthContext';
 import { env } from '../config/env';
 import { completeRecording } from '../services/capture/completeRecording';
-import { collectRecordingStartMetadata } from '../services/capture/metadataCollector';
+import {
+  collectRecordingStartMetadata,
+  warmUpLocationPermission,
+} from '../services/capture/metadataCollector';
 import { RECORDING_VIDEO_QUALITY } from '../services/capture/recordingConfig';
 import type { RecordingStartMetadata } from '../services/capture/metadataCollector';
+import { createRandomId } from '../utils/ids';
 import { formatRecordingTimer } from '../utils/time';
+import { showAlert } from '../utils/showAlert';
+import { toUserMessage, userMessages } from '../utils/userMessages';
 
 type CapturePhase = 'idle' | 'recording' | 'saving';
 
@@ -32,20 +36,37 @@ export function CaptureScreen({ onBack }: CaptureScreenProps) {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [microphonePermission, requestMicrophonePermission] = useMicrophonePermissions();
 
-  const [facing, setFacing] = useState<CameraType>('back');
+  const [facing, setFacing] = useState<CameraType>('front');
   const [phase, setPhase] = useState<CapturePhase>('idle');
   const [elapsedMs, setElapsedMs] = useState(0);
-  const [statusMessage, setStatusMessage] = useState('Ready to record');
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string>(userMessages.capture.ready);
 
   const activeRecordingRef = useRef<{
     videoId: string;
     startedAt: string;
     startedAtMs: number;
-    startMetadata: RecordingStartMetadata;
+    startMetadataPromise: Promise<RecordingStartMetadata>;
     recordPromise: Promise<{ uri: string } | undefined>;
   } | null>(null);
 
   const maxDurationMs = env.maxRecordingDurationSeconds * 1000;
+
+  useEffect(() => {
+    void warmUpLocationPermission();
+  }, []);
+
+  useEffect(() => {
+    setIsCameraReady(false);
+  }, [facing]);
+
+  useEffect(() => {
+    return () => {
+      if (activeRecordingRef.current) {
+        cameraRef.current?.stopRecording();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (phase !== 'recording') {
@@ -94,7 +115,7 @@ export function CaptureScreen({ onBack }: CaptureScreenProps) {
     }
 
     setPhase('saving');
-    setStatusMessage('Saving video and metadata...');
+    setStatusMessage(userMessages.capture.saving);
 
     try {
       const result = await active.recordPromise;
@@ -103,32 +124,35 @@ export function CaptureScreen({ onBack }: CaptureScreenProps) {
       }
 
       const endedAt = new Date().toISOString();
+      const startMetadata = await active.startMetadataPromise;
       const savedRecord = await completeRecording({
         videoId: active.videoId,
         workerId,
         startedAt: active.startedAt,
         endedAt,
         tempUri: result.uri,
-        startMetadata: active.startMetadata,
+        startMetadata,
       });
 
       activeRecordingRef.current = null;
       setPhase('idle');
       setElapsedMs(0);
-      setStatusMessage('Ready to record');
+      setStatusMessage(userMessages.capture.ready);
 
-      Alert.alert(
-        'Video saved',
-        `Saved ${savedRecord.videoId}\nDuration: ${Math.round(savedRecord.durationMs / 1000)}s\nUpload status: pending`
+      showAlert(
+        userMessages.capture.saveSuccessTitle,
+        userMessages.capture.saveSuccessBody
       );
     } catch (error) {
       activeRecordingRef.current = null;
       setPhase('idle');
       setElapsedMs(0);
-      setStatusMessage('Ready to record');
+      setStatusMessage(userMessages.capture.ready);
 
-      const message = error instanceof Error ? error.message : 'Failed to save recording';
-      Alert.alert('Save failed', message);
+      showAlert(
+        userMessages.capture.saveFailedTitle,
+        toUserMessage(error, 'We could not save your recording. Please try again.')
+      );
     }
   }, [workerId]);
 
@@ -139,37 +163,37 @@ export function CaptureScreen({ onBack }: CaptureScreenProps) {
 
     const hasPermission = await requestPermissions();
     if (!hasPermission) {
-      Alert.alert('Permission required', 'Camera and microphone access are needed to record video.');
+      showAlert(userMessages.capture.permissionsTitle, userMessages.capture.permissionsBody);
       return;
     }
 
-    const videoId = uuidv4();
+    if (!isCameraReady || !cameraRef.current) {
+      showAlert(userMessages.capture.cameraNotReadyTitle, userMessages.capture.cameraNotReadyBody);
+      return;
+    }
+
+    const videoId = createRandomId();
     const startedAt = new Date().toISOString();
     const startedAtMs = Date.now();
-    const startMetadata = await collectRecordingStartMetadata();
 
-    const recordPromise = cameraRef.current?.recordAsync({
+    setPhase('recording');
+    setElapsedMs(0);
+    setStatusMessage(userMessages.capture.recording);
+
+    const recordPromise = cameraRef.current.recordAsync({
       maxDuration: env.maxRecordingDurationSeconds,
       maxFileSize: 100 * 1024 * 1024,
-      videoQuality: RECORDING_VIDEO_QUALITY,
     });
 
-    if (!recordPromise) {
-      Alert.alert('Camera not ready', 'Please wait for the camera to initialize.');
-      return;
-    }
+    const startMetadataPromise = collectRecordingStartMetadata();
 
     activeRecordingRef.current = {
       videoId,
       startedAt,
       startedAtMs,
-      startMetadata,
+      startMetadataPromise,
       recordPromise,
     };
-
-    setPhase('recording');
-    setElapsedMs(0);
-    setStatusMessage('Recording in progress');
 
     void recordPromise
       .then(() => {
@@ -181,12 +205,14 @@ export function CaptureScreen({ onBack }: CaptureScreenProps) {
         activeRecordingRef.current = null;
         setPhase('idle');
         setElapsedMs(0);
-        setStatusMessage('Ready to record');
+        setStatusMessage(userMessages.capture.ready);
 
-        const message = error instanceof Error ? error.message : 'Recording failed';
-        Alert.alert('Recording failed', message);
+        showAlert(
+          userMessages.capture.recordingFailedTitle,
+          toUserMessage(error, 'Recording was interrupted. Please try again.')
+        );
       });
-  }, [finalizeRecording, phase, requestPermissions, workerId]);
+  }, [finalizeRecording, isCameraReady, phase, requestPermissions, workerId]);
 
   const stopRecording = useCallback(() => {
     if (phase !== 'recording') {
@@ -195,6 +221,22 @@ export function CaptureScreen({ onBack }: CaptureScreenProps) {
 
     cameraRef.current?.stopRecording();
   }, [phase]);
+
+  const handleBack = useCallback(() => {
+    if (phase === 'recording') {
+      showAlert(
+        userMessages.capture.recordingInProgressTitle,
+        userMessages.capture.recordingInProgressBody
+      );
+      return;
+    }
+
+    if (phase === 'saving') {
+      return;
+    }
+
+    onBack();
+  }, [onBack, phase]);
 
   const toggleCamera = useCallback(() => {
     if (phase === 'recording') {
@@ -236,18 +278,18 @@ export function CaptureScreen({ onBack }: CaptureScreenProps) {
         style={styles.camera}
         facing={facing}
         mode="video"
+        mirror={facing === 'front'}
         videoQuality={RECORDING_VIDEO_QUALITY}
+        onCameraReady={() => setIsCameraReady(true)}
       />
 
       <View style={styles.overlay}>
         <View style={styles.topRow}>
-          <Pressable style={styles.secondaryButton} onPress={onBack} disabled={phase === 'saving'}>
+          <Pressable style={styles.secondaryButton} onPress={handleBack} disabled={phase === 'saving'}>
             <Text style={styles.secondaryButtonText}>Back</Text>
           </Pressable>
           <Text style={styles.timer}>{formatRecordingTimer(elapsedMs)}</Text>
-          <Text style={styles.limit}>
-            / {formatRecordingTimer(maxDurationMs)}
-          </Text>
+          <Text style={styles.limit}>/ {formatRecordingTimer(maxDurationMs)}</Text>
         </View>
 
         <Text style={styles.status}>{statusMessage}</Text>
@@ -269,14 +311,19 @@ export function CaptureScreen({ onBack }: CaptureScreenProps) {
             </Pressable>
           ) : (
             <Pressable
-              style={[styles.recordButton, phase === 'saving' && styles.disabledButton]}
+              style={[
+                styles.recordButton,
+                (phase === 'saving' || !isCameraReady) && styles.disabledButton,
+              ]}
               onPress={() => void startRecording()}
-              disabled={phase === 'saving'}
+              disabled={phase === 'saving' || !isCameraReady}
             >
               {phase === 'saving' ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.primaryButtonText}>Record</Text>
+                <Text style={styles.primaryButtonText}>
+                  {isCameraReady ? 'Record' : userMessages.capture.loadingCamera}
+                </Text>
               )}
             </Pressable>
           )}

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "EgoCapture",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.locara.egocentric.capture",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -37,7 +38,8 @@
         {
           "locationWhenInUsePermission": "Allow location access to attach GPS metadata to recordings."
         }
-      ]
+      ],
+      "expo-video"
     ],
     "extra": {
       "apiBaseUrl": "http://10.0.2.2:8000",

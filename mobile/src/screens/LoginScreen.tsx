@@ -10,8 +10,10 @@ import {
   View,
 } from 'react-native';
 
+import { appBranding } from '../config/branding';
 import { useAuth } from '../context/AuthContext';
 import type { IdentifierType } from '../types/auth';
+import { toUserMessage, userMessages } from '../utils/userMessages';
 
 export function LoginScreen() {
   const { login } = useAuth();
@@ -27,8 +29,7 @@ export function LoginScreen() {
     try {
       await login(identifier, identifierType);
     } catch (loginError) {
-      const message = loginError instanceof Error ? loginError.message : 'Login failed';
-      setError(message);
+      setError(toUserMessage(loginError, userMessages.login.genericFailure));
     } finally {
       setSubmitting(false);
     }
@@ -39,9 +40,10 @@ export function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Text style={styles.title}>Worker Login</Text>
+      <Text style={styles.appName}>{appBranding.name}</Text>
+      <Text style={styles.title}>Welcome back</Text>
       <Text style={styles.subtitle}>
-        Mock login for this assignment. Your session stays saved even after app restart.
+        Sign in with your work email or phone. Your session stays saved on this device.
       </Text>
 
       <View style={styles.toggleRow}>
@@ -87,7 +89,7 @@ export function LoginScreen() {
         {submitting ? (
           <ActivityIndicator color="#FFFFFF" />
         ) : (
-          <Text style={styles.loginButtonText}>Continue</Text>
+          <Text style={styles.loginButtonText}>Continue to {appBranding.homeTitle}</Text>
         )}
       </Pressable>
     </KeyboardAvoidingView>
@@ -100,6 +102,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
     backgroundColor: '#0B1220',
+  },
+  appName: {
+    color: '#60A5FA',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 8,
   },
   title: {
     fontSize: 28,
@@ -149,6 +159,7 @@ const styles = StyleSheet.create({
   error: {
     color: '#F87171',
     marginBottom: 12,
+    lineHeight: 20,
   },
   loginButton: {
     backgroundColor: '#2563EB',

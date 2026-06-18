@@ -6,6 +6,7 @@ import { AppNavigator } from './src/navigation/AppNavigator';
 import { BootstrapStatusScreen } from './src/screens/BootstrapStatusScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { bootstrapApp } from './src/services/bootstrap';
+import { toUserMessage, userMessages } from './src/utils/userMessages';
 
 type BootstrapState = {
   loading: boolean;
@@ -19,8 +20,8 @@ function AppContent() {
   if (status === 'loading') {
     return (
       <BootstrapStatusScreen
-        title="Restoring session"
-        message="Checking secure storage for an existing worker session."
+        title={userMessages.startup.restoringSessionTitle}
+        message={userMessages.startup.restoringSessionBody}
       />
     );
   }
@@ -45,7 +46,7 @@ export default function App() {
         await bootstrapApp();
         setBootstrapState({ loading: false, ready: true, error: null });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown startup error';
+        const message = toUserMessage(error, userMessages.startup.failedBody);
         setBootstrapState({ loading: false, ready: false, error: message });
       }
     })();
@@ -55,8 +56,8 @@ export default function App() {
     return (
       <>
         <BootstrapStatusScreen
-          title="Bootstrapping system"
-          message="Preparing local database and core services."
+          title={userMessages.startup.bootstrappingTitle}
+          message={userMessages.startup.bootstrappingBody}
         />
         <StatusBar style="light" />
       </>
@@ -67,8 +68,8 @@ export default function App() {
     return (
       <>
         <BootstrapStatusScreen
-          title="Startup failed"
-          message={`Initialization failed: ${bootstrapState.error}`}
+          title={userMessages.startup.failedTitle}
+          message={bootstrapState.error ?? userMessages.startup.failedBody}
         />
         <StatusBar style="light" />
       </>
