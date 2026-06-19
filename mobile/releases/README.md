@@ -1,14 +1,31 @@
 # Debug APK
 
-**File:** `EgoCapture-debug.apk` (~162 MB)  
+**File:** `EgoCapture-debug.apk` (~166 MB)  
 **Package:** `com.locara.egocentric.capture`  
 **Min Android:** API 24 (Android 7.0) · **Target:** API 36  
 
+## One APK — emulator and physical phone
+
+The app **automatically** picks the backend URL:
+
+| Where you run the app | Backend URL used |
+|-----------------------|------------------|
+| **Android emulator** | `http://10.0.2.2:8000` (your PC from the emulator) |
+| **Physical phone** | Your PC’s LAN IP (set when the APK was built) |
+
+Rebuild before sharing so the phone URL matches your Wi‑Fi:
+
+```bash
+cd mobile
+npm run android:apk
+```
+
+The build script detects your LAN IP and embeds it for physical devices.
+
 ## Tested on
 
-- **Physical device:** Android phone over Wi‑Fi (same network as backend), standalone APK install  
+- **Physical device:** Android phone on same Wi‑Fi as backend  
 - **Emulator:** Pixel 6 AVD (Android 14, API 34)  
-- **Build machine:** Ubuntu, OpenJDK 17, Expo SDK 56  
 
 ## Install
 
@@ -16,13 +33,18 @@
 adb install -r EgoCapture-debug.apk
 ```
 
-Or copy the APK to a physical Android 10+ device and open it (enable “Install unknown apps” if prompted).
+Or copy the APK to the phone and open it (enable “Install unknown apps” if prompted).
 
-## Before using the app
+## Before testing
 
-1. Start the backend on your machine (`uvicorn` on port 8000).
-2. **Emulator:** API URL is preconfigured as `http://10.0.2.2:8000`.
-3. **Physical device:** set your computer’s LAN IP in `app.json` / rebuild, or use the same network and update `apiBaseUrl`.
+1. Start backend on your PC:
+   ```bash
+   cd backend && source .venv/bin/activate
+   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+2. **Emulator:** no extra config — uses `10.0.2.2:8000`.
+3. **Physical phone:** same Wi‑Fi as PC; APK must be built on that PC (`npm run android:apk`).
+4. Allow camera, microphone, and location when asked.
 
 **Login:** `worker@locara.com` or `+919876543210`
 
@@ -33,6 +55,10 @@ cd mobile
 npm run android:apk
 ```
 
-Output is written to this folder.
+Override LAN IP manually if needed:
 
-**Important:** The build embeds the JavaScript bundle inside the APK so the app runs **without Metro / Expo dev server**. If the app shows a blank screen or “Unable to load script”, rebuild with `npm run android:apk` — do not use a debug build that expects port 8081.
+```bash
+DEVICE_API_HOST=192.168.1.50 npm run android:apk
+```
+
+The JS bundle is embedded — **no Metro / Expo dev server** required after install.

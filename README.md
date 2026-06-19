@@ -30,7 +30,9 @@ npm install
 npm run android
 ```
 
-The Android script starts the emulator if needed, installs Expo Go, and opens the app. The emulator expects the backend at `http://10.0.2.2:8000` (set in `app.json`).
+The Android script starts the emulator if needed, installs Expo Go, and opens the app.
+
+**API URL (automatic):** emulator → `http://10.0.2.2:8000` · physical phone → your PC LAN IP (set in `mobile/.env` as `EXPO_PUBLIC_DEVICE_API_BASE_URL` for Expo Go, or baked in when you run `npm run android:apk`).
 
 **Demo login:** `worker@locara.com` or `+919876543210`
 
@@ -45,7 +47,7 @@ cd mobile
 npm run android:apk
 ```
 
-Output: **`mobile/releases/EgoCapture-debug.apk`** (~162 MB). Install with:
+Output: **`mobile/releases/EgoCapture-debug.apk`**. One build works on **emulator and physical phone** (URL is chosen automatically). Install with:
 
 ```bash
 adb install -r mobile/releases/EgoCapture-debug.apk

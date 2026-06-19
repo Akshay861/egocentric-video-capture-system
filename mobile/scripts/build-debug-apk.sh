@@ -6,6 +6,20 @@ cd "$(dirname "$0")/.."
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
 export NODE_ENV=production
 
+LAN_IP="${DEVICE_API_HOST:-$(hostname -I | awk '{print $1}')}"
+if [[ -z "$LAN_IP" ]]; then
+  echo "Could not detect LAN IP. Set DEVICE_API_HOST manually, e.g.:"
+  echo "  DEVICE_API_HOST=192.168.1.42 npm run android:apk"
+  exit 1
+fi
+
+export EXPO_PUBLIC_DEVICE_API_BASE_URL="http://${LAN_IP}:8000"
+
+echo "==> API URLs for this build:"
+echo "    Emulator (automatic): http://10.0.2.2:8000"
+echo "    Physical device:      ${EXPO_PUBLIC_DEVICE_API_BASE_URL}"
+echo ""
+
 echo "==> Generating native Android project (if needed)..."
 npx expo prebuild --platform android --no-install
 
@@ -31,6 +45,10 @@ cp "$APK_SRC" "$APK_DEST"
 echo ""
 echo "==> Standalone debug APK ready (no Metro server required):"
 echo "    mobile/releases/EgoCapture-debug.apk"
+echo ""
+echo "Works on:"
+echo "  • Emulator  → backend at http://10.0.2.2:8000"
+echo "  • Phone     → backend at ${EXPO_PUBLIC_DEVICE_API_BASE_URL} (same Wi-Fi)"
 echo ""
 echo "Install:"
 echo "    adb install -r releases/EgoCapture-debug.apk"
