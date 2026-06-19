@@ -29,7 +29,8 @@
     "start": "expo start",
     "android": "bash scripts/android-dev.sh",
     "android:open": "bash scripts/open-expo-go.sh",
-    "ios": "expo start --ios",
+    "android:apk": "bash scripts/build-debug-apk.sh",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "private": true

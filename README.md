@@ -2,7 +2,7 @@
 
 EgoCapture is a phone app that lets field workers record first-person videos from their Android device. When someone finishes a recording, the video is saved safely on the phone first — even without internet. When a connection is available, the app uploads it to the cloud automatically in the background. If an upload fails, the app keeps trying and the worker can retry later from a simple library screen.
 
-Behind the scenes, a small server helps the phone send each video to cloud storage (AWS S3) without storing passwords or secret keys on the device. The phone asks the server for a temporary, one-time upload link, sends the file directly to the cloud, and marks it as uploaded once confirmed. This project was built for the [Locara Labs technical assignment](Locara_Labs_Assignment-1.pdf) — covering video capture, reliable local storage, automatic cloud sync, and the infrastructure design that supports it at scale.
+Behind the scenes, a small server helps the phone send each video to cloud storage (AWS S3) without storing passwords or secret keys on the device. The phone asks the server for a temporary, one-time upload link, sends the file directly to the cloud, and marks it as uploaded once confirmed. This project was built for the [Locara Labs technical assignment] — covering video capture, reliable local storage, automatic cloud sync, and the infrastructure design that supports it at scale.
 
 ---
 
@@ -35,6 +35,23 @@ The Android script starts the emulator if needed, installs Expo Go, and opens th
 **Demo login:** `worker@locara.com` or `+919876543210`
 
 **Environment files:** copy `backend/.env.example` → `backend/.env`. Mobile config is optional via `mobile/.env.example` or `app.json` `expo.extra`. AWS credentials stay in the backend only.
+
+### Debug APK (submission build)
+
+Build a standalone installable APK:
+
+```bash
+cd mobile
+npm run android:apk
+```
+
+Output: **`mobile/releases/EgoCapture-debug.apk`** (~162 MB). Install with:
+
+```bash
+adb install -r mobile/releases/EgoCapture-debug.apk
+```
+
+Tested on **physical Android device (Wi‑Fi)** and **Pixel 6 emulator (API 34)**. More details: [mobile/releases/README.md](./mobile/releases/README.md).
 
 ---
 
